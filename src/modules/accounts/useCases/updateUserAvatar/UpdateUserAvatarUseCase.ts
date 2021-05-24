@@ -1,28 +1,31 @@
 import { inject, injectable } from "tsyringe";
 
-import { deleteFile } from "../../../../utils/file";
-import { IUsersRepository } from "../../repositories/IUsersRepository";
+import { IUsersRepository } from "@modules/accounts/repositories/IUsersRepository";
+import { IStorageProvider } from "@shared/container/providers/StorageProvider/IStorageProvider";
 
 interface IRequest {
-  userId: string;
-  avatarFile: string;
+  user_id: string;
+  avatar_file: string;
 }
 
 @injectable()
 class UpdateUserAvatarUseCase {
   constructor(
     @inject("UsersRepository")
-    private usersRepository: IUsersRepository
+    private usersRepository: IUsersRepository,
+    @inject("StorageProvider")
+    private storageProvider: IStorageProvider
   ) {}
-
-  async execute({ userId, avatarFile }: IRequest): Promise<void> {
-    const user = await this.usersRepository.findById(userId);
+  async execute({ user_id, avatar_file }: IRequest): Promise<void> {
+    const user = await this.usersRepository.findById(user_id);
 
     if (user.avatar) {
-      await deleteFile(`./tmp/avatar/${user.avatar}`);
+      await this.storageProvider.delete(user.avatar, "avatar");
     }
 
-    user.avatar = avatarFile;
+    await this.storageProvider.save(avatar_file, "avatar");
+
+    user.avatar = avatar_file;
 
     await this.usersRepository.create(user);
   }

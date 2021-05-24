@@ -2,8 +2,11 @@ import { compare } from "bcrypt";
 import { sign } from "jsonwebtoken";
 import { inject, injectable } from "tsyringe";
 
-import { AppError } from "../../../../errors/AppError";
-import { IUsersRepository } from "../../repositories/IUsersRepository";
+import auth from "@config/auth";
+import { IUsersRepository } from "@modules/accounts/repositories/IUsersRepository";
+import { IUsersTokensRepository } from "@modules/accounts/repositories/IUsersTokensRepository";
+import { IDateProvider } from "@shared/container/providers/DateProvider/IDateProvider";
+import { AppError } from "@shared/errors/AppErrors";
 
 interface IRequest {
   email: string;
@@ -16,37 +19,68 @@ interface IResponse {
     email: string;
   };
   token: string;
+  refresh_token: string;
 }
 
 @injectable()
 class AuthenticateUserUseCase {
-  constructor(
+  public constructor(
     @inject("UsersRepository")
-    private usersRepository: IUsersRepository
-  ) {}
+    private usersRepository: IUsersRepository,
 
+    @inject("UsersTokensRepository")
+    private usersTokensRepository: IUsersTokensRepository,
+
+    @inject("DayjsDateProvider")
+    private dayjsDateProvider: IDateProvider
+  ) {}
   async execute({ email, password }: IRequest): Promise<IResponse> {
     const user = await this.usersRepository.findByEmail(email);
+    const {
+      expires_in_token,
+      secret_refresh_token,
+      secret_token,
+      expires_in_refresh_token,
+      expires_refresh_token_days,
+    } = auth;
 
     if (!user) {
-      throw new AppError("email or password incorrect");
+      throw new AppError("Email or password incorrect!");
     }
 
-    const passowordMatch = await compare(password, user.password);
+    const passwordMatch = await compare(password, user.password);
 
-    if (!passowordMatch) {
-      throw new AppError("email or password incorrect");
+    if (!passwordMatch) {
+      throw new AppError("Email or password incorrect!");
     }
 
-    const token = sign(
-      { isAdmin: user.isAdmin },
-      "39b514340ad3532aadc467e534e5fa37",
-      { subject: user.id, expiresIn: "1d" }
+    const token = sign({}, secret_token, {
+      subject: user.id,
+      expiresIn: expires_in_token,
+    });
+
+    const refresh_token = sign({ email }, secret_refresh_token, {
+      subject: user.id,
+      expiresIn: expires_in_refresh_token,
+    });
+
+    const refresh_token_expires_date = this.dayjsDateProvider.addDays(
+      expires_refresh_token_days
     );
 
+    await this.usersTokensRepository.create({
+      expires_date: refresh_token_expires_date,
+      refresh_token,
+      user_id: user.id,
+    });
+
     const tokenReturn: IResponse = {
-      user: { name: user.name, email: user.email },
       token,
+      refresh_token,
+      user: {
+        name: user.name,
+        email: user.email,
+      },
     };
 
     return tokenReturn;

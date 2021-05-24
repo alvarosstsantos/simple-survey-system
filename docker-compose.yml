@@ -1,19 +1,18 @@
 version: "3.7"
 
 services:
-  database:
+  postgres:
     image: postgres
     container_name: database_sss
     restart: always
-    ports:
-      - 5433:5433
     environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=sss
-    command: -p 5433
+      - POSTGRES_USER=docker
+      - POSTGRES_PASSWORD=rekcod
+      - POSTGRES_DB=database_sss
     volumes:
       - pgdata:/data/postgres
+    ports:
+      - 5432:5432
 
   app:
     build: .
@@ -24,9 +23,9 @@ services:
     volumes:
       - .:/usr/app
     links:
-      - database
+      - postgres
     depends_on:
-      - database
+      - postgres
 
 volumes:
   pgdata:
