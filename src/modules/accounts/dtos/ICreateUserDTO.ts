@@ -1,10 +1,8 @@
-interface ICreateUserDTO {
-  name: string;
-  password: string;
-  email: string;
-  driver_license: string;
-  id?: string;
-  avatar?: string;
-}
+import { User } from "../infra/typeorm/entities/User";
+
+type ICreateUserDTO = Pick<
+  User,
+  "id" | "name" | "email" | "password" | "avatar"
+>;
 
 export { ICreateUserDTO };

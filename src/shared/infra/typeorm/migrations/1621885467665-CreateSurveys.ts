@@ -36,8 +36,8 @@ export class CreateSurveys1621885467665 implements MigrationInterface {
             referencedTableName: "users",
             referencedColumnNames: ["id"],
             columnNames: ["userId"],
-            onDelete: "SET NULL",
-            onUpdate: "SET NULL",
+            onDelete: "RESTRICT",
+            onUpdate: "RESTRICT",
           },
         ],
       })
